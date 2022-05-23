@@ -18,9 +18,16 @@ import (
 func Register(ctx *gin.Context) {
 	DB := common.GetDB()
 	//获取参数
-	name := ctx.PostForm("name")
-	telephone := ctx.PostForm("telephone")
-	password := ctx.PostForm("password")
+	//使用map
+	// var requesMap =make(map[string]string)
+	// json.NewDecoder(ctx.Request.Body).Decode(&requesMap)
+	//结构体
+	var requesUser = model.User{}
+	// json.NewDecoder(ctx.Request.Body).Decode(&requesUser)
+	ctx.Bind(&requesUser)
+	name := requesUser.Name
+	telephone := requesUser.Telephone
+	password := requesUser.Password
 	if len(telephone) != 11 {
 		response.Response(ctx, http.StatusUnprocessableEntity, 422, nil, "手机号必须为11位")
 		return
@@ -52,10 +59,15 @@ func Register(ctx *gin.Context) {
 	}
 	DB.Create(&newUser)
 
-	ctx.JSON(200, gin.H{
-		"code": 200,
-		"msg":  "注册成功",
-	})
+	token, err := common.ReleaseToken(newUser)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"code": 500, "msg": "系统异常",
+		})
+		log.Panicf("token generate error:%v", err)
+		return
+	}
+	response.Success(ctx, gin.H{"token": token}, "注册成功")
 
 }
 func Login(ctx *gin.Context) {
